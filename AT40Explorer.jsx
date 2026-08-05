@@ -1,0 +1,324 @@
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, Music, User } from 'lucide-react';
+
+export default function AT40Explorer() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [selectedArtist, setSelectedArtist] = useState('');
+  const [selectedSong, setSelectedSong] = useState('');
+  const [artistResults, setArtistResults] = useState(null);
+  const [songResults, setSongResults] = useState(null);
+
+  const [artistSearch, setArtistSearch] = useState('');
+  const [songSearch, setSongSearch] = useState('');
+
+  // Load data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Try to fetch the compact data
+        const response = await fetch('/at40_compact.json');
+        if (!response.ok) throw new Error('Failed to load data');
+        const jsonData = await response.json();
+        setData(jsonData);
+      } catch (err) {
+        // Fallback: provide a message
+        setError('Unable to load AT40 data. Please ensure at40_compact.json is available.');
+        console.error('Data load error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Handle artist selection
+  const handleArtistSelect = (artist) => {
+    setSelectedArtist(artist);
+    setSongResults(null);
+    setSongSearch('');
+    setSelectedSong('');
+
+    if (data && data.artists[artist]) {
+      const songs = data.artists[artist].songs;
+      const results = songs.map(song => {
+        const songData = data.songs[song];
+        return {
+          song,
+          artists: songData.artists,
+          peak: songData.peak,
+          weeks_at_1: songData.weeks_at_1,
+          total_weeks: songData.total_weeks,
+          entry_date: songData.entry_date,
+          exit_date: songData.exit_date
+        };
+      }).sort((a, b) => a.song.localeCompare(b.song));
+
+      setArtistResults(results);
+    }
+  };
+
+  // Handle song selection
+  const handleSongSelect = (song) => {
+    setSelectedSong(song);
+    setArtistResults(null);
+    setArtistSearch('');
+    setSelectedArtist('');
+
+    if (data && data.songs[song]) {
+      const songData = data.songs[song];
+      setSongResults({
+        song,
+        artists: songData.artists,
+        peak: songData.peak,
+        weeks_at_1: songData.weeks_at_1,
+        total_weeks: songData.total_weeks,
+        entry_date: songData.entry_date,
+        exit_date: songData.exit_date,
+        chart_history: songData.chart_history
+      });
+    }
+  };
+
+  // Filter artists based on search
+  const filteredArtists = data && artistSearch
+    ? Object.keys(data.artists).filter(a =>
+        a.toLowerCase().includes(artistSearch.toLowerCase())
+      ).sort()
+    : data ? Object.keys(data.artists).sort() : [];
+
+  // Filter songs based on search
+  const filteredSongs = data && songSearch
+    ? Object.keys(data.songs).filter(s =>
+        s.toLowerCase().includes(songSearch.toLowerCase())
+      ).sort()
+    : data ? Object.keys(data.songs).sort() : [];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-purple-900 to-indigo-900">
+        <div className="text-center">
+          <Music className="w-12 h-12 text-white mx-auto mb-4 animate-bounce" />
+          <p className="text-white text-xl">Loading AT40 data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-purple-900 to-indigo-900">
+        <div className="text-center text-white">
+          <Music className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p className="text-xl">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center mb-3">
+            <Music className="w-8 h-8 text-pink-400 mr-3" />
+            <h1 className="text-4xl font-bold text-white">AT40 Explorer</h1>
+          </div>
+          <p className="text-indigo-200">Casey Kasem's American Top 40 • 1970-1979</p>
+          <p className="text-sm text-indigo-300 mt-2">{Object.keys(data?.songs || {}).length} songs • {Object.keys(data?.artists || {}).length} artists</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Artist Search */}
+          <div className="bg-white bg-opacity-10 backdrop-blur-md rounded-lg p-6 border border-white border-opacity-20">
+            <div className="flex items-center mb-4">
+              <User className="w-5 h-5 text-pink-400 mr-2" />
+              <h2 className="text-xl font-bold text-white">Search by Artist</h2>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Type artist name..."
+              value={artistSearch}
+              onChange={(e) => setArtistSearch(e.target.value)}
+              className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-gray-300 rounded-lg border border-white border-opacity-30 focus:outline-none focus:border-opacity-100 mb-3"
+            />
+
+            <div className="bg-black bg-opacity-30 rounded-lg h-64 overflow-y-auto">
+              {filteredArtists.slice(0, 100).map((artist) => (
+                <button
+                  key={artist}
+                  onClick={() => handleArtistSelect(artist)}
+                  className={`w-full text-left px-4 py-2 transition-colors border-b border-white border-opacity-10 ${
+                    selectedArtist === artist
+                      ? 'bg-pink-500 bg-opacity-70 text-white'
+                      : 'text-gray-100 hover:bg-white hover:bg-opacity-20'
+                  }`}
+                >
+                  {artist}
+                </button>
+              ))}
+              {filteredArtists.length > 100 && (
+                <div className="px-4 py-2 text-gray-400 text-sm">
+                  Showing 100 of {filteredArtists.length} artists
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Song Search */}
+          <div className="bg-white bg-opacity-10 backdrop-blur-md rounded-lg p-6 border border-white border-opacity-20">
+            <div className="flex items-center mb-4">
+              <Music className="w-5 h-5 text-cyan-400 mr-2" />
+              <h2 className="text-xl font-bold text-white">Search by Song</h2>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Type song title..."
+              value={songSearch}
+              onChange={(e) => setSongSearch(e.target.value)}
+              className="w-full px-4 py-2 bg-white bg-opacity-20 text-white placeholder-gray-300 rounded-lg border border-white border-opacity-30 focus:outline-none focus:border-opacity-100 mb-3"
+            />
+
+            <div className="bg-black bg-opacity-30 rounded-lg h-64 overflow-y-auto">
+              {filteredSongs.slice(0, 100).map((song) => (
+                <button
+                  key={song}
+                  onClick={() => handleSongSelect(song)}
+                  className={`w-full text-left px-4 py-2 transition-colors border-b border-white border-opacity-10 text-sm ${
+                    selectedSong === song
+                      ? 'bg-cyan-500 bg-opacity-70 text-white'
+                      : 'text-gray-100 hover:bg-white hover:bg-opacity-20'
+                  }`}
+                >
+                  {song}
+                </button>
+              ))}
+              {filteredSongs.length > 100 && (
+                <div className="px-4 py-2 text-gray-400 text-sm">
+                  Showing 100 of {filteredSongs.length} songs
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Results */}
+        {artistResults && (
+          <div className="mt-6 bg-white bg-opacity-10 backdrop-blur-md rounded-lg p-6 border border-white border-opacity-20">
+            <h3 className="text-2xl font-bold text-white mb-4">
+              Songs by {selectedArtist}
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white border-opacity-30">
+                    <th className="text-left px-4 py-2 text-pink-300">Song</th>
+                    <th className="text-center px-4 py-2 text-pink-300">Peak</th>
+                    <th className="text-center px-4 py-2 text-pink-300">Weeks #1</th>
+                    <th className="text-center px-4 py-2 text-pink-300">Total Weeks</th>
+                    <th className="text-left px-4 py-2 text-pink-300">Entry Date</th>
+                    <th className="text-left px-4 py-2 text-pink-300">Exit Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {artistResults.map((result, idx) => (
+                    <tr key={idx} className="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-10">
+                      <td className="px-4 py-3 text-white">{result.song}</td>
+                      <td className="text-center px-4 py-3 text-gray-200">#{result.peak}</td>
+                      <td className="text-center px-4 py-3 text-gray-200">{result.weeks_at_1}</td>
+                      <td className="text-center px-4 py-3 text-gray-200">{result.total_weeks}</td>
+                      <td className="px-4 py-3 text-gray-300">{result.entry_date}</td>
+                      <td className="px-4 py-3 text-gray-300">{result.exit_date}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {songResults && (
+          <div className="mt-6 bg-white bg-opacity-10 backdrop-blur-md rounded-lg p-6 border border-white border-opacity-20">
+            <h3 className="text-2xl font-bold text-white mb-6">
+              {songResults.song}
+            </h3>
+
+            {/* Song Details */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+              <div className="bg-black bg-opacity-30 rounded-lg p-4">
+                <div className="text-cyan-300 text-sm font-semibold">Peak Position</div>
+                <div className="text-3xl font-bold text-white">#{songResults.peak}</div>
+              </div>
+              <div className="bg-black bg-opacity-30 rounded-lg p-4">
+                <div className="text-pink-300 text-sm font-semibold">Weeks at #1</div>
+                <div className="text-3xl font-bold text-white">{songResults.weeks_at_1}</div>
+              </div>
+              <div className="bg-black bg-opacity-30 rounded-lg p-4">
+                <div className="text-yellow-300 text-sm font-semibold">Total Weeks</div>
+                <div className="text-3xl font-bold text-white">{songResults.total_weeks}</div>
+              </div>
+              <div className="bg-black bg-opacity-30 rounded-lg p-4">
+                <div className="text-green-300 text-sm font-semibold">Entered</div>
+                <div className="text-lg font-bold text-white">{songResults.entry_date}</div>
+              </div>
+              <div className="bg-black bg-opacity-30 rounded-lg p-4">
+                <div className="text-purple-300 text-sm font-semibold">Exited</div>
+                <div className="text-lg font-bold text-white">{songResults.exit_date}</div>
+              </div>
+            </div>
+
+            {/* Artist Info */}
+            <div className="mb-8">
+              <h4 className="text-lg font-bold text-white mb-2">Artist{songResults.artists.length > 1 ? 's' : ''}</h4>
+              <div className="flex flex-wrap gap-2">
+                {songResults.artists.map((artist, idx) => (
+                  <span key={idx} className="bg-pink-500 bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                    {artist}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Chart History */}
+            <div>
+              <h4 className="text-lg font-bold text-white mb-4">Chart History</h4>
+              <div className="bg-black bg-opacity-30 rounded-lg overflow-y-auto max-h-96">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white border-opacity-30 sticky top-0 bg-black bg-opacity-50">
+                      <th className="text-left px-4 py-2 text-cyan-300">Date</th>
+                      <th className="text-center px-4 py-2 text-cyan-300">Position</th>
+                      <th className="text-center px-4 py-2 text-cyan-300">Weeks on Chart</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {songResults.chart_history.map((entry, idx) => (
+                      <tr key={idx} className="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-10">
+                        <td className="px-4 py-2 text-gray-200">{entry.date}</td>
+                        <td className="text-center px-4 py-2 text-white font-semibold">#{entry.pos}</td>
+                        <td className="text-center px-4 py-2 text-gray-300">{entry.weeks_on_chart}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!artistResults && !songResults && (
+          <div className="mt-12 text-center text-gray-300">
+            <Music className="w-16 h-16 mx-auto mb-4 opacity-30" />
+            <p className="text-lg">Select an artist or song to view chart details</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
