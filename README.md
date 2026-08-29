@@ -1,6 +1,8 @@
 # AT40 Explorer
 
-An interactive web application for exploring Casey Kasem's American Top 40 charts from 1970-1979. Search by week, artist, song, or year to discover chart history, peak positions, and week-by-week rankings.
+A first project to learn Claude and GitHub.
+
+A fan of the American Top 40 shows hosted by Casey Kasem throughout the 1970's. A simple HTML project to view song / artist information, with lookups by week, artist, song title, and year.
 
 ## Features
 
