@@ -4,6 +4,8 @@ A first project to learn Claude and GitHub.
 
 A fan of the American Top 40 shows hosted by Casey Kasem throughout the 1970's. A simple HTML project to view song / artist information, with lookups by week, artist, song title, and year.
 
+Produces an interactive web application for exploring Casey Kasem's American Top 40 charts from 1970-1979. Search by week, artist, song, or year to discover chart history, peak positions, and week-by-week rankings.
+
 ## Features
 
 - **Pick a Week's Countdown** - Select any of the 522 chart weeks (grouped by year) and see the complete Top 40 for that week:
